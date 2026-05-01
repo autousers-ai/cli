@@ -55,13 +55,18 @@ const DEFAULT_SCOPES = [
 interface LoginFlags {
   key?: string;
   browser?: boolean; // commander negates `--no-browser` to `browser=false`
-  baseUrl?: string;
 }
 
 export async function loginCommand(
   flags: LoginFlags,
-  _command: Command
+  command: Command
 ): Promise<void> {
+  // --base-url lives on the parent program (global flag); read it via
+  // optsWithGlobals so a single declaration covers every subcommand and
+  // commander's option-name resolution stays unambiguous.
+  const globalBaseUrl =
+    (command.optsWithGlobals?.().baseUrl as string | undefined) ?? undefined;
+
   // Validate paste-mode shape before any side effects.
   if (flags.key !== undefined) {
     if (!flags.key.startsWith("ak_live_") || flags.key.length < 12) {
@@ -78,7 +83,7 @@ export async function loginCommand(
       ...clearOAuthFields(existing),
       apiKey: flags.key,
     };
-    if (flags.baseUrl) next.baseUrl = flags.baseUrl;
+    if (globalBaseUrl) next.baseUrl = globalBaseUrl;
     await writeConfig(next);
 
     process.stdout.write(
@@ -89,7 +94,7 @@ export async function loginCommand(
   }
 
   // Browser flow.
-  const baseUrl = resolveBaseUrl(flags.baseUrl);
+  const baseUrl = resolveBaseUrl(globalBaseUrl);
   const openBrowser = flags.browser !== false;
 
   try {
@@ -111,7 +116,7 @@ export async function loginCommand(
       clientId: tokens.clientId,
     };
     delete next.apiKey;
-    if (flags.baseUrl) next.baseUrl = flags.baseUrl;
+    if (globalBaseUrl) next.baseUrl = globalBaseUrl;
     await writeConfig(next);
 
     process.stdout.write(

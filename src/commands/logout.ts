@@ -17,6 +17,8 @@
  * doesn't have to re-set the override every time.
  */
 
+import { Command } from "commander";
+
 import {
   clearOAuthFields,
   configPath,
@@ -26,11 +28,14 @@ import {
   type CliConfig,
 } from "../config.js";
 
-interface LogoutFlags {
-  baseUrl?: string;
-}
+export async function logoutCommand(
+  _flags: Record<string, never>,
+  command: Command
+): Promise<void> {
+  // --base-url is the parent program's global flag; read via optsWithGlobals.
+  const globalBaseUrl =
+    (command.optsWithGlobals?.().baseUrl as string | undefined) ?? undefined;
 
-export async function logoutCommand(flags: LogoutFlags = {}): Promise<void> {
   const cfg = await readConfig();
   if (!cfg || (!cfg.apiKey && !cfg.refreshToken && !cfg.accessToken)) {
     process.stdout.write(`Already logged out.\n`);
@@ -40,7 +45,7 @@ export async function logoutCommand(flags: LogoutFlags = {}): Promise<void> {
   // Best-effort server-side revoke. Only meaningful for OAuth tokens —
   // `ak_live_*` keys are revoked from the dashboard, not by the CLI.
   if (cfg.refreshToken && cfg.clientId) {
-    const baseUrl = await getBaseUrl(flags.baseUrl);
+    const baseUrl = await getBaseUrl(globalBaseUrl);
     try {
       const body = new URLSearchParams({
         token: cfg.refreshToken,

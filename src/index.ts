@@ -63,6 +63,10 @@ export function buildProgram(): Command {
       "disable ANSI color even when stdout is a TTY (also: NO_COLOR=1)"
     );
 
+  // Note: --base-url is intentionally NOT registered as a per-subcommand
+  // option here; it's a global on the parent program so commander can't
+  // get confused by a duplicate-name flag. login/logout read it via
+  // `command.optsWithGlobals().baseUrl`.
   program
     .command("login")
     .description(
@@ -76,19 +80,11 @@ export function buildProgram(): Command {
       "--no-browser",
       "Print the auth URL instead of opening a browser tab"
     )
-    .option(
-      "--base-url <url>",
-      "Override the API host (defaults to https://app.autousers.ai)"
-    )
     .action(loginCommand);
 
   program
     .command("logout")
     .description("Revoke OAuth tokens server-side and clear local credentials")
-    .option(
-      "--base-url <url>",
-      "Override the API host (defaults to https://app.autousers.ai)"
-    )
     .action(logoutCommand);
 
   program
