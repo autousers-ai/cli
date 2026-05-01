@@ -403,6 +403,16 @@ async function registerClient(
     },
     body: JSON.stringify({
       client_name: "Autousers CLI",
+      // Surfaced on the consent screen alongside the client name so users
+      // see a recognisable mark instead of the "A" letter fallback. Points
+      // at the autousers brand mark; can be swapped to a CLI-specific
+      // asset (e.g. `/landing/logos/clients/autousers-cli.svg`) when one
+      // ships without a CLI release.
+      logo_uri: `${baseUrl}/logo/autousers_logo.svg`,
+      // RFC 7591 metadata that the consent screen surfaces in fine print.
+      client_uri: "https://autousers.ai/help/cli",
+      tos_uri: "https://autousers.ai/terms",
+      policy_uri: "https://autousers.ai/privacy",
       redirect_uris: [redirectUri],
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
