@@ -8,6 +8,10 @@
     "url": "https://autousers.ai/contact",
     "email": "support@autousers.ai"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autousers-ai/cli.git"
+  },
   "keywords": [
     "autousers",
     "cli",
