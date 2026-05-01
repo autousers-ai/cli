@@ -7,6 +7,12 @@ terminal. Same `ak_live_*` API key as [`@autousers/mcp`](https://www.npmjs.com/p
 [![npm version](https://img.shields.io/npm/v/@autousers/cli)](https://www.npmjs.com/package/@autousers/cli)
 [![MIT licensed](https://img.shields.io/npm/l/@autousers/cli)](./LICENSE)
 
+> **Mirror notice.** This repository is a read-only mirror of the `cli/`
+> directory in the Autousers monorepo. Direct PRs filed against this repo
+> will be force-overwritten on the next mirror sync. Please file issues
+> here; fixes flow through the upstream repo and propagate automatically
+> on the next push.
+
 ---
 
 ## Install
