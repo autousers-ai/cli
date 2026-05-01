@@ -29,6 +29,7 @@ import { Command } from "commander";
 import {
   clearOAuthFields,
   configPath,
+  getBaseUrl,
   readConfig,
   writeConfig,
   type CliConfig,
@@ -93,8 +94,13 @@ export async function loginCommand(
     return;
   }
 
-  // Browser flow.
-  const baseUrl = resolveBaseUrl(globalBaseUrl);
+  // Browser flow. Reuse the same precedence the rest of the CLI uses:
+  // explicit flag → env → config file's saved baseUrl → prod default. The
+  // config-file fallback matters when a user previously logged in against
+  // a non-prod host (e.g. localhost dev) and re-runs `autousers login`
+  // without re-passing --base-url; without it, re-login silently falls
+  // back to prod and 401s on a host the prior session never used.
+  const baseUrl = await getBaseUrl(globalBaseUrl);
   const openBrowser = flags.browser !== false;
 
   try {
@@ -130,17 +136,4 @@ export async function loginCommand(
     }
     throw err;
   }
-}
-
-/**
- * Same precedence as `getBaseUrl` but synchronous and tied to the flag —
- * the explicit flag wins, then env, then prod default. We don't read the
- * config file here because login is the moment we WRITE it — reading
- * from it for the base URL during login is circular.
- */
-function resolveBaseUrl(flag: string | undefined): string {
-  if (flag && flag.length > 0) return flag.replace(/\/+$/, "");
-  const fromEnv = process.env.AUTOUSERS_BASE_URL;
-  if (fromEnv && fromEnv.length > 0) return fromEnv.replace(/\/+$/, "");
-  return "https://app.autousers.ai";
 }
