@@ -27,16 +27,18 @@
 import { Command } from "commander";
 
 import { CLI_VERSION } from "./client.js";
-import { evalCommand } from "./commands/eval.js";
+import { buildAutouserCommand } from "./commands/autouser.js";
+import { buildEvalCommand } from "./commands/eval.js";
 import { loginCommand } from "./commands/login.js";
 import { logoutCommand } from "./commands/logout.js";
+import { buildTemplateCommand } from "./commands/template.js";
 import { usageCommand } from "./commands/usage.js";
 import { versionCommand } from "./commands/version.js";
 import { whoamiCommand } from "./commands/whoami.js";
 import { AutousersApiError, MissingApiKeyError } from "./errors.js";
 
 /** Build the command tree. Extracted so tests / smoke can reuse it. */
-function buildProgram(): Command {
+export function buildProgram(): Command {
   const program = new Command();
 
   program
@@ -51,16 +53,42 @@ function buildProgram(): Command {
     .option(
       "--base-url <url>",
       "Override the API host (defaults to https://app.autousers.ai)"
+    )
+    // Output-shaping flags. Read in each subcommand via `resolveContext`.
+    // Commander's built-in `--no-color` negation flips `color` to `false`.
+    .option("--json", "emit machine-readable JSON instead of text")
+    .option("--quiet", "suppress spinners and non-essential output")
+    .option(
+      "--no-color",
+      "disable ANSI color even when stdout is a TTY (also: NO_COLOR=1)"
     );
 
   program
     .command("login")
-    .description("Save your Autousers API key to ~/.autousers/config.json")
+    .description(
+      "Sign in to Autousers (browser flow by default; --key for paste mode)"
+    )
+    .option(
+      "--key <ak_live_...>",
+      "Skip the browser; persist this API key directly"
+    )
+    .option(
+      "--no-browser",
+      "Print the auth URL instead of opening a browser tab"
+    )
+    .option(
+      "--base-url <url>",
+      "Override the API host (defaults to https://app.autousers.ai)"
+    )
     .action(loginCommand);
 
   program
     .command("logout")
-    .description("Remove the saved API key from ~/.autousers/config.json")
+    .description("Revoke OAuth tokens server-side and clear local credentials")
+    .option(
+      "--base-url <url>",
+      "Override the API host (defaults to https://app.autousers.ai)"
+    )
     .action(logoutCommand);
 
   program
@@ -68,14 +96,25 @@ function buildProgram(): Command {
     .description("Print the active user / team for the resolved API key")
     .action(whoamiCommand);
 
-  program
-    .command("eval")
-    .description("Manage evaluations (list, get, create, results, ...)")
-    .action(evalCommand);
+  // `eval`, `autouser`, and `template` each own their subcommand tree.
+  // Adding them via `.addCommand` (rather than `.command(...).action(...)`)
+  // keeps the help text under the parent route — `autousers eval --help`
+  // shows `list` / `get` rather than dumping the full top-level menu.
+  program.addCommand(buildEvalCommand());
+  program.addCommand(buildAutouserCommand());
+  program.addCommand(buildTemplateCommand());
 
   program
     .command("usage")
     .description("Show free-run pool remaining and token spend rollup")
+    .option(
+      "--range <window>",
+      "time window: 7d | 30d | 90d (default 30d)",
+      (value: string): "7d" | "30d" | "90d" => {
+        if (value === "7d" || value === "30d" || value === "90d") return value;
+        throw new Error(`--range must be 7d, 30d, or 90d (got "${value}")`);
+      }
+    )
     .action(usageCommand);
 
   program

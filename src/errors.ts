@@ -61,3 +61,21 @@ export class AutousersApiError extends Error {
     this.name = "AutousersApiError";
   }
 }
+
+/**
+ * Thrown by the OAuth browser-flow orchestrator when something inside the
+ * flow itself fails — DCR rejected the redirect URI, the AS bounced
+ * `?error=access_denied` to the callback, the user closed the tab and we
+ * timed out, etc. Distinct from `MissingApiKeyError` (which is the
+ * "no token at all" case) and `AutousersApiError` (which is a 4xx/5xx
+ * from `/api/v1/*`).
+ *
+ * The dispatcher prints `err.message` verbatim to stderr — keep messages
+ * actionable ("OAuth callback timed out after 300s") rather than raw.
+ */
+export class OAuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "OAuthError";
+  }
+}

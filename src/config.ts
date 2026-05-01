@@ -3,9 +3,16 @@
  *
  * Stored at `~/.autousers/config.json` with file mode `0600` (owner read/
  * write only) so a shared-home machine doesn't leak the bearer token to
- * other users. The shape is intentionally tiny — adding fields here means
- * touching every consumer, so we keep it to the bare minimum until a
- * concrete use case arrives.
+ * other users.
+ *
+ * The shape grew with the v0.2 OAuth browser flow:
+ *
+ *   - Paste-mode (v0.1): `{ apiKey: "ak_live_..." }`
+ *   - OAuth (v0.2):     `{ accessToken, refreshToken, expiresAt, clientId }`
+ *
+ * Both shapes coexist for back-compat: a config written by `autousers
+ * login --key ak_live_...` is still readable, and `getApiKey` still
+ * resolves it. The API client knows how to drive either path.
  *
  * The resolution order in {@link getApiKey} mirrors common CLI conventions:
  *
@@ -28,7 +35,17 @@ import { dirname, join } from "node:path";
  * wants to pin a `baseUrl` and supplies the key via env.
  */
 export interface CliConfig {
+  /** Paste-mode API key (`ak_live_*`). Set by `login --key`. */
   apiKey?: string;
+  /** OAuth access token (HS256 JWT). Set by the browser-flow `login`. */
+  accessToken?: string;
+  /** OAuth refresh token (90d TTL). Used to refresh `accessToken` on 401. */
+  refreshToken?: string;
+  /** ISO timestamp of `accessToken` expiry. */
+  expiresAt?: string;
+  /** DCR-issued OAuth `client_id`. Required to refresh and to revoke. */
+  clientId?: string;
+  /** Override the API host. */
   baseUrl?: string;
 }
 
@@ -82,6 +99,21 @@ export async function writeConfig(config: CliConfig): Promise<void> {
 }
 
 /**
+ * Strip every OAuth-related field from a config object. Returns a NEW
+ * object — does not mutate the input. Used by `logout` to wipe access /
+ * refresh tokens while leaving e.g. `baseUrl` overrides intact (callers
+ * decide whether to also drop `apiKey` separately).
+ */
+export function clearOAuthFields(config: CliConfig): CliConfig {
+  const next: CliConfig = { ...config };
+  delete next.accessToken;
+  delete next.refreshToken;
+  delete next.expiresAt;
+  delete next.clientId;
+  return next;
+}
+
+/**
  * Resolve the API key in CLI-conventional priority order. `null` means
  * "all three sources missed" — the API client converts that into a
  * {@link MissingApiKeyError} with a friendly recovery hint.
@@ -89,6 +121,11 @@ export async function writeConfig(config: CliConfig): Promise<void> {
  * `explicitKey` is the value of `--key` passed by the user, threaded
  * through from the commander option parser. Pass `undefined` if the
  * caller isn't a command that accepts the flag.
+ *
+ * Note: this only resolves `ak_live_*` paste-mode keys. OAuth tokens
+ * are resolved via the API client's bearer-resolution path (which knows
+ * how to refresh on 401). Paste-mode and OAuth are deliberately
+ * disjoint resolution paths — see `client.ts:createClientFromConfig`.
  */
 export async function getApiKey(
   explicitKey?: string | undefined
