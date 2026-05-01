@@ -1,6 +1,6 @@
 {
   "name": "@autousers/cli",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Official CLI for Autousers — UX evaluation, autousers, and calibration from your terminal.",
   "license": "MIT",
   "homepage": "https://autousers.ai/help/cli",
