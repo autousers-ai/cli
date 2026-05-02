@@ -1,0 +1,68 @@
+{
+  "name": "@autousers/cli",
+  "version": "1.1.0",
+  "description": "Official CLI for Autousers — UX evaluation, autousers, and calibration from your terminal.",
+  "license": "MIT",
+  "homepage": "https://autousers.ai/help/cli",
+  "bugs": {
+    "url": "https://autousers.ai/contact",
+    "email": "support@autousers.ai"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autousers-ai/cli.git"
+  },
+  "keywords": [
+    "autousers",
+    "cli",
+    "ux-research",
+    "evaluation"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "autousers": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "prebuild": "rm -rf dist",
+    "build": "tsc && chmod +x dist/index.js",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "smoke": "tsx scripts/smoke.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "regen:logo": "FORCE_COLOR=3 env -u TERM_PROGRAM -u LC_TERMINAL -u KITTY_WINDOW_ID node scripts/generate-logo-ansi.mjs",
+    "prepublishOnly": "npm run build && npm pack --dry-run"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@inkjs/ui": "^2.0.0",
+    "@jrichman/ink": "^6.4.10",
+    "commander": "^12.1.0",
+    "ink": "npm:@jrichman/ink@^6.4.10",
+    "react": "19.0.0-rc-de68d2f4-20241204",
+    "zustand": "^5.0.8"
+  },
+  "overrides": {
+    "ink": "npm:@jrichman/ink@^6.4.10"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^19.2.5",
+    "ink-testing-library": "^4.0.0",
+    "terminal-image": "^4.3.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.5.0"
+  }
+}
