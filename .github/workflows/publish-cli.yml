@@ -1,0 +1,106 @@
+# Required GitHub repo secrets (on autousers-ai/cli):
+#   NPM_TOKEN — npm Granular Access Token, scope @autousers, read+write,
+#               Bypass 2FA enabled (npm 2FA tokens for CI MUST tick this
+#               or `npm publish` 403s; see ADR / migration notes).
+#
+# Trigger a release: in the monorepo (darrenhead/autousers), run
+#   `cd cli && npm version <patch|minor|major>`
+#   `cd .. && git push origin main --follow-tags`
+# The mirror-cli.yml workflow forwards the tag to autousers-ai/cli, this
+# workflow fires on the tag, runs `npm publish --access public --provenance`,
+# and the package lands on npmjs.com with a verified-provenance attestation.
+
+name: Publish CLI
+
+on:
+  push:
+    tags:
+      - "cli-v*"
+
+# Never cancel a publish mid-flight; concurrent publishes on the same tag
+# don't make sense.
+concurrency:
+  group: publish-cli-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # required for npm provenance OIDC attestation
+
+jobs:
+  verify:
+    name: Verify package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+          cache: npm
+
+      - name: Verify tag matches package.json version
+        run: |
+          set -euo pipefail
+          TAG_REF="${GITHUB_REF##refs/tags/}"
+          TAG_VERSION="${TAG_REF#cli-v}"
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          echo "Tag ref:        ${TAG_REF}"
+          echo "Tag version:    ${TAG_VERSION}"
+          echo "Package version:${PKG_VERSION}"
+          if [ "${TAG_VERSION}" != "${PKG_VERSION}" ]; then
+            echo "::error::Tag version (${TAG_VERSION}) does not match package.json version (${PKG_VERSION}). Aborting publish."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Pack dry-run (audit would-be-published files)
+        run: npm pack --dry-run
+
+  publish:
+    name: Publish to npm
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+          cache: npm
+
+      - name: Verify tag matches package.json version
+        run: |
+          set -euo pipefail
+          TAG_REF="${GITHUB_REF##refs/tags/}"
+          TAG_VERSION="${TAG_REF#cli-v}"
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          if [ "${TAG_VERSION}" != "${PKG_VERSION}" ]; then
+            echo "::error::Tag version (${TAG_VERSION}) does not match package.json version (${PKG_VERSION}). Aborting publish."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish to npm with verified provenance
+        # --provenance ties this published artifact to a specific GH Actions
+        # run from a public source repo (autousers-ai/cli). npm shows a
+        # "verified provenance" badge on the package page.
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
